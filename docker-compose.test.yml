@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  app_test:
+    build:
+      context: .
+    container_name: laravel_api_test
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+      - ./storage:/var/www/storage
+      - ./bootstrap/cache:/var/www/bootstrap/cache
+      - ./.env.testing:/var/www/.env.testing
+    depends_on:
+      - db_test
+
+  db_test:
+    image: mysql:8.0.32
+    container_name: laravel_db_test
+    restart: always
+    ports:
+      - "3307:3306"  # ← 本番と衝突しないように
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=task_manager_testing
+      - MYSQL_USER=laravel_user
+      - MYSQL_PASSWORD=root
+    volumes:
+      - mysql_data_test:/var/lib/mysql
+
+volumes:
+  mysql_data_test:
