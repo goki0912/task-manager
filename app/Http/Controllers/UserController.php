@@ -2,33 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Helpers\ApiResponse;
+use App\UseCases\User\GetMeUseCase;
+use App\UseCases\User\GetUserListUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    /**
-     * 全ユーザーの一覧を返す（自分も含める）
-     */
-    public function index(): JsonResponse
+    public function index(GetUserListUseCase $useCase): JsonResponse
     {
-        $users = User::select('id', 'name')->get();
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $users
-        ]);
+        return ApiResponse::success(null, $useCase->execute());
     }
 
-    public function me(Request $request): JsonResponse
+    public function me(Request $request, GetMeUseCase $useCase): JsonResponse
     {
-        $user = $request->user();
+        $me = $useCase->execute($request->user());
 
-        return response()->json([
-            'id' => $user->id,
-            'name' => $user->name,
-            'line_user_id' => $user->line_user_id,
-        ]);
+        return ApiResponse::success(null, $me);
     }
 }

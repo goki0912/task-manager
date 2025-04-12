@@ -21,7 +21,7 @@ test('作成者は他のユーザーをタスクにアサインできる', funct
 
     // Assert
     $response->assertOk();
-    $response->assertJsonFragment(['message' => 'Users assigned to task successfully']);
+    $response->assertJsonFragment(['message' => 'アサインしました']);
     expect($task->assignedUsers()->pluck('users.id'))->toEqualCanonicalizing($assignees->pluck('id'));
 });
 

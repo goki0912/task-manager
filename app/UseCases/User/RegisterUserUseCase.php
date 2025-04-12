@@ -1,17 +1,16 @@
 <?php
 
-namespace App\UseCases\Auth;
+namespace App\UseCases\User;
 
 use App\Models\User;
-use App\Repositories\AuthRepositoryInterface;
+use App\Repositories\UserRepositoryInterface;
 
 readonly class RegisterUserUseCase
 {
-    public function __construct(private AuthRepositoryInterface $repository) {}
+    public function __construct(private UserRepositoryInterface $repository) {}
 
     public function execute(array $data): User
     {
-        // リポジトリに登録を依頼して、ユーザーを返す
         return $this->repository->createUser($data);
     }
 }

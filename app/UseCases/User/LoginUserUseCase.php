@@ -1,24 +1,21 @@
 <?php
 
-namespace App\UseCases\Auth;
+namespace App\UseCases\User;
 
 use App\Models\User;
-use App\Repositories\AuthRepositoryInterface;
-use Illuminate\Http\JsonResponse;
+use App\Repositories\UserRepositoryInterface;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 
 readonly class LoginUserUseCase
 {
-    public function __construct(private AuthRepositoryInterface $repository) {}
+    public function __construct(private UserRepositoryInterface $repository) {}
     public function execute(array $credentials): User
     {
         $user = $this->repository->findByEmail($credentials['email']);
 
         if (!$user || !Hash::check($credentials['password'], $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
+            throw new UnauthorizedHttpException('', 'Invalid credentials.');
         }
 
         return $user;

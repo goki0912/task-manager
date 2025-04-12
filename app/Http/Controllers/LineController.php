@@ -2,66 +2,35 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ApiResponse;
+use App\UseCases\Line\GenerateLineRedirectUrlUseCase;
+use App\UseCases\Line\HandleLineCallbackUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
-use Laravel\Sanctum\PersonalAccessToken;
 
 class LineController extends Controller
 {
-    public function redirectToLine(Request $request)
+    public function redirectToLine(Request $request, GenerateLineRedirectUrlUseCase $useCase): JsonResponse
     {
-        $token = $request->query('token'); // ← フロントから送られたトークン
+        $url = $useCase->execute($request->query('token'));
 
-        $query = http_build_query([
-            'response_type' => 'code',
-            'client_id' => config('services.line.login_channel_id'),
-            'redirect_uri' => config('services.line.redirect_uri'),
-            'state' => $token, // ← ここに保存して後で使う
-            'scope' => 'profile openid',
-        ]);
-
-        return response()->json([
-            'url' => "https://access.line.me/oauth2/v2.1/authorize?$query"
-        ]);
+        return ApiResponse::success(null, ['url' => $url]);
     }
 
-
-    public function handleCallback(Request $request)
+    public function handleCallback(Request $request, HandleLineCallbackUseCase $useCase)
     {
-        $code = $request->get('code');
-        $token = $request->get('state'); // ← ここでトークンを受け取る
+        $user = $useCase->execute(
+            $request->get('code'),
+            $request->get('state')
+        );
 
-        // トークンからユーザーを特定
-        $accessToken = PersonalAccessToken::findToken($token);
-
-        if (!$accessToken) {
-            return response('無効なトークン', 401);
+        if (!$user) {
+            return redirect(config('app.frontend_url') . '/line/error');
         }
 
-        $user = $accessToken->tokenable; // ← トークンに紐づく User モデル
-        Auth::login($user); // ← ログインさせる（必要なら）
+        Auth::login($user);
 
-        // アクセストークン取得
-        $response = Http::asForm()->post('https://api.line.me/oauth2/v2.1/token', [
-            'grant_type' => 'authorization_code',
-            'code' => $code,
-            'redirect_uri' => config('services.line.redirect_uri'),
-            'client_id' => config('services.line.login_channel_id'),
-            'client_secret' => config('services.line.client_secret'),
-        ]);
-
-        $accessToken = $response['access_token'];
-
-        // LINE プロフィール取得
-        $profile = Http::withToken($accessToken)
-            ->get('https://api.line.me/v2/profile')
-            ->json();
-
-        $user->update(['line_user_id' => $profile['userId'] ?? null]);
-
-        return redirect('http://localhost:5173/tasks');
+        return redirect(config('app.frontend_url') . '/tasks');
     }
-
 }

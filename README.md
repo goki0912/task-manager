@@ -3,13 +3,14 @@
 Laravel12 + Vue3 によるタスク管理アプリケーションです。  
 ユーザー登録・ログイン後、自身のタスクを作成・編集・削除でき、他ユーザーをタスクにアサイン可能です。  
 LINE通知によるリマインダー機能付き。
+[友だち登録はこちら](https://lin.ee/kWtISYV)
 
 ---
 
 ## 🚀 機能一覧
 
 - ユーザー認証（登録 / ログイン / ログアウト）
-- タスクCRUD（title / description / due_date / remind_before_minutes）
+- タスクCRUD（title / description / is_done / due_date / remind_before_minutes）
 - 他ユーザーへのタスクアサイン
 - タスク期限のLINE通知（通知時刻カスタマイズ可）
 - 認可ポリシーによるアクセス制限（他人のタスクは見られない）
@@ -20,61 +21,40 @@ LINE通知によるリマインダー機能付き。
 ## 🧪 テスト
 
 - Pest によるFeatureテスト・認可ポリシーテスト・リマインド通知ジョブテストなどを完備
-- テスト用DB（`task_manager_testing`）を使ってデータ破壊を防止
+- テスト用DB（`task_manager_testing`）を使って環境を分離
 
 ---
 
 ## 📦 セットアップ手順（Docker使用）
 
 ```bash
+# Laravel バックエンドの準備
 cd task-manager
+cp .env.example .env
 
-# ビルド＆起動
-docker compose up -d --build
+# ↓ 以下の環境変数を .env に追記（提供された値を入力）
+echo '
+LINE_LOGIN_CHANNEL_ID= # 入力してください
+LINE_CLIENT_SECRET= # 入力してください
+LINE_REDIRECT_URI=http://localhost:8000/api/line/callback
+LINE_CHANNEL_ACCESS_TOKEN= # 入力してください
+' >> .env
 
-# Laravel初期化
-docker exec app php artisan migrate
-docker exec app php artisan db:seed
-
-# スケジューラーとキューを起動（別ターミナルで）
-docker exec app php artisan schedule:work
-docker exec app php artisan queue:work
-
-
-
-
-
-
-curl -X POST http://localhost:8000/api/register \
--H "Content-Type: application/json" \
--H "Accept: application/json" \
--d '{
-"name": "Test User",
-"email": "test@example.com",
-"password": "password"
-}'
-
-curl -X POST http://localhost:8000/api/login \
--H "Content-Type: application/json" \
--H "Accept: application/json" \
--d '{
-"email": "test@example.com",
-"password": "password"
-}'
-
-
-curl -X POST http://localhost:8000/api/logout \
--H "Accept: application/json" \
--H "Authorization: Bearer YOUR_TOKEN_HERE"
-
-
-curl -X POST http://localhost:8000/api/tasks/1/assign \
--H "Authorization: Bearer YOUR_TOKEN" \
--H "Content-Type: application/json" \
--d '{"user_ids": [2, 3]}'
-
-php artisan queue:workとphp artisan schedule:workを動かす
+make init # ビルド&起動&マイグレーション
+make workers # ワーカー起動
 ```
+```bash
+# フロントエンドの起動（Vue）
+cd vue
+npm install
+npm run dev
+```
+## 🧪 テスト実行
+
+```bash
+make test
+```
+
 
 ---
 
@@ -95,7 +75,7 @@ php artisan queue:workとphp artisan schedule:workを動かす
 
 ---
 
-## 📮 エンドポイント仕様（抜粋）
+## 📮 エンドポイント仕様
 
 ### 認証系
 
@@ -134,19 +114,7 @@ php artisan queue:workとphp artisan schedule:workを動かす
 
 ---
 
-## 🧪 テスト実行
-
-```bash
-# テスト用コンテナを起動
-docker compose -f docker-compose.test.yml up -d
-
-# テスト実行
-docker exec app php artisan test --env=testing
-```
-
----
-
-## ⏰ 通知ジョブ
+## ⏰ リマインド通知ジョブ
 
 - タスクの `due_date - remind_before_minutes` が現在時刻を過ぎたら通知
 - 毎分 `SendTaskDueReminders` ジョブが走り、通知処理を実行
@@ -157,12 +125,12 @@ docker exec app php artisan test --env=testing
 ## 📝 使用技術
 
 - Laravel 12
-- Sanctum
+- Sanctum（認証ライブラリ）
+- Pest（テストフレームワーク）
 - MySQL
 - Vue 3 (Vite)
 - Docker / Docker Compose
 - LINE Messaging API
-- Pest（テストフレームワーク）
 
 ---
 
@@ -171,11 +139,6 @@ docker exec app php artisan test --env=testing
 約12時間
 
 ---
-
-## 🛠 注意事項
-
-- `.env` と `.env.testing` をそれぞれ環境に合わせて用意してください
-- LINE通知を使うには LINE Developers の設定が必要です
 
 
 

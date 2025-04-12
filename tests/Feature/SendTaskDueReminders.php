@@ -21,7 +21,7 @@ test('タスクの期限に達したら作成者とアサインユーザーに�
         'user_id' => $creator->id,
         'title' => 'LINE通知テストタスク',
         'due_date' => now()->addMinutes(30),
-        'remind_before_minutes' => 40, // → now() で通知条件成立
+        'remind_before_minutes' => 40,
         'is_reminded' => false,
     ]);
 
@@ -53,7 +53,7 @@ test('すでに通知済みのタスクには通知が送られない', function
         'title' => '通知済みタスク',
         'due_date' => now()->addMinutes(30),
         'remind_before_minutes' => 30,
-        'is_reminded' => true, // → もう通知済み
+        'is_reminded' => true,
     ]);
 
     // Act

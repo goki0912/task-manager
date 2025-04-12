@@ -19,7 +19,7 @@ it('ユーザー登録ができる', function () {
 
     // Assert
     $response->assertCreated();
-    $response->assertJsonStructure(['message', 'token']);
+    $response->assertJsonStructure(['status', 'message', 'data']);
     expect(User::where('email', 'test@example.com')->exists())->toBeTrue();
 });
 
@@ -41,7 +41,7 @@ it('ログインに成功するとトークンが返る', function () {
 
     // Assert
     $response->assertOk();
-    $response->assertJsonStructure(['message', 'token']);
+    $response->assertJsonStructure(['status', 'message', 'data']);
 });
 
 /**
@@ -62,7 +62,9 @@ it('ログインに失敗するとエラーが返る', function () {
 
     // Assert
     $response->assertStatus(401);
-    $response->assertJsonValidationErrors(['email']);
+    $response->assertJson([
+        'message' => 'Invalid credentials.'
+    ]);
 });
 
 /**
@@ -78,6 +80,6 @@ it('ログアウトするとトークンが無効化される', function () {
 
     // Assert
     $response->assertOk();
-    $response->assertJsonFragment(['message' => 'Logged out successfully']);
+    $response->assertJsonFragment(['message' => 'ログアウトしました']);
     expect($user->tokens()->count())->toBe(0);
 });

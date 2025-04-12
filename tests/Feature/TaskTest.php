@@ -92,6 +92,43 @@ it('認証ユーザーが自分のタスクを削除できる', function () {
     $response = $this->withToken($token)->deleteJson("/api/tasks/{$task->id}");
 
     // Assert
-    $response->assertNoContent();
+    $response->assertJsonFragment(['message' => 'タスクを削除しました']);
     expect(Task::find($task->id))->toBeNull();
+});
+
+/**
+ * @see \App\Http\Controllers\TaskController::toggleDone()
+ */
+it('自分のタスクの完了状態を切り替えられる', function () {
+    // Arrange
+    $user = User::factory()->create();
+    $token = $user->createToken('test')->plainTextToken;
+    $task = Task::factory()->for($user)->create(['is_done' => false]);
+
+    // Act
+    $response = $this->withToken($token)->patchJson("/api/tasks/{$task->id}/toggle");
+
+    // Assert
+    $response->assertOk();
+    $response->assertJsonPath('status', 'success');
+    $response->assertJsonPath('data.is_done', true);
+    expect($task->fresh()->is_done)->toBeTrue();
+});
+
+/**
+ * @see \App\Http\Controllers\TaskController::toggleDone()
+ */
+it('他人のタスクの完了状態は変更できない', function () {
+    // Arrange
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $token = $user->createToken('test')->plainTextToken;
+    $task = Task::factory()->for($otherUser)->create(['is_done' => false]);
+
+    // Act
+    $response = $this->withToken($token)->patchJson("/api/tasks/{$task->id}/toggle");
+
+    // Assert
+    $response->assertForbidden();
+    expect($task->fresh()->is_done)->toBeFalse();
 });

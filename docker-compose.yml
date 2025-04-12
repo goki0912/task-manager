@@ -23,7 +23,7 @@ services:
             - "3306:3306"
         environment:
             - MYSQL_ROOT_PASSWORD=root
-            - MYSQL_DATABASE=task_manager,task_manager_testing
+            - MYSQL_DATABASE=task_manager
             - MYSQL_USER=laravel_user
             - MYSQL_PASSWORD=root
         volumes:

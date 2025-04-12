@@ -1,19 +1,34 @@
-# テスト用コンテナを起動（初回や必要なときだけ）
-test-up:
-	docker-compose -f docker-compose.test.yml up --build -d
+DCO := docker compose
 
-# テスト用コンテナを停止
-test-down:
-	docker-compose -f docker-compose.test.yml down
+init:
+	@make build
+	@make up
+	@make migrate
 
-# テストDBにマイグレーション
-test-migrate:
-	docker-compose -f docker-compose.test.yml exec app_test php artisan migrate --env=testing
+build:
+	$(DCO) build --no-cache
 
-# テスト実行（Pest）
+up:
+	$(DCO) up -d
+
+down:
+	$(DCO) down
+
+migrate:
+	$(DCO) run --rm app php artisan migrate
+
+tinker:
+	$(DCO) run --rm app php artisan tinker
+
+schedule:
+	docker exec app php artisan schedule:work
+
+queue:
+	docker exec app php artisan queue:work
+
+workers:
+	@make schedule
+	@make queue
+
 test:
-	docker-compose -f docker-compose.test.yml exec app_test php artisan test --env=testing
-
-# 設定キャッシュをクリア
-test-clear:
-	docker-compose -f docker-compose.test.yml exec app_test php artisan config:clear
+	$(DCO) -f docker-compose.test.yml run --rm app_test php artisan test --env=testing

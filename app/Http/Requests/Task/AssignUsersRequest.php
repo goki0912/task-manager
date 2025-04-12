@@ -1,5 +1,5 @@
 <?php
-namespace App\Http\Requests;
+namespace App\Http\Requests\Task;
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -7,7 +7,7 @@ class AssignUsersRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // 認可は UseCase 側で行う
+        return true;
     }
 
     public function rules(): array

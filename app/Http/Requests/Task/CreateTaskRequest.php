@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Task;
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -8,7 +8,7 @@ class CreateTaskRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // 認証済みルートにだけ使うので true
+        return true;
     }
 
     public function rules(): array
@@ -17,7 +17,7 @@ class CreateTaskRequest extends FormRequest
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'due_date' => 'nullable|date',
-            'remind_before_minutes' => 'nullable|integer|min:1|max:1440',
+            'remind_before_minutes' => 'nullable|integer|min:1|max:1440', // 24時間
         ];
     }
 }

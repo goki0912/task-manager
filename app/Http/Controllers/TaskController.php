@@ -2,118 +2,81 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ApiResponse;
+use App\Http\Requests\Task\AssignUsersRequest;
+use App\Http\Requests\Task\CreateTaskRequest;
+use App\Http\Requests\Task\UpdateTaskRequest;
 use App\Models\Task;
+use App\Models\User;
+use App\UseCases\Task\AssignUsersToTaskUseCase;
+use App\UseCases\Task\CreateTaskUseCase;
+use App\UseCases\Task\DeleteTaskUseCase;
+use App\UseCases\Task\GetTaskListUseCase;
+use App\UseCases\Task\UpdateTaskUseCase;
+use App\UseCases\Task\ShowTaskUseCase;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 
 class TaskController extends Controller
 {
     use AuthorizesRequests;
 
-    /**
-     * ログインユーザーのタスク一覧
-     */
-    public function index(): JsonResponse
+    public function index(GetTaskListUseCase $useCase): JsonResponse
     {
-        $tasks = Auth::user()
-            ->tasks()
-            ->with('assignedUsers:id,name') // 👈 アサインユーザーの名前だけを取得
-            ->latest()
-            ->get();
+        /** @var User $user */
+        $user = Auth::user();
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $tasks
-        ]);
+        $tasks = $useCase->execute($user);
+
+        return ApiResponse::success(null, $tasks);
     }
 
-    /**
-     * タスク作成
-     */
-    public function store(Request $request): JsonResponse
+    public function store(CreateTaskRequest $request, CreateTaskUseCase $useCase): JsonResponse
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'due_date' => 'nullable|date',
-            'remind_before_minutes' => 'nullable|integer|min:1|max:1440', // 最大24時間
-        ]);
+        $task = $useCase->execute($request->validated(), auth()->id());
 
-        $task = Auth::user()->tasks()->create($validated);
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $task,
-        ], 201);
+        return ApiResponse::success('タスクを作成しました', $task, 201);
     }
 
-    /**
-     * タスク詳細（認可ポリシー適用）
-     */
-    public function show(Task $task): JsonResponse
+    public function show(Task $task, ShowTaskUseCase $useCase): JsonResponse
     {
-        $this->authorize('view', $task);
+        $taskWithUsers = $useCase->execute($task);
 
-        $task->load('assignedUsers'); // ←追加
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $task,
-        ]);
+        return ApiResponse::success(null, $taskWithUsers);
     }
 
-    /**
-     * タスク更新（認可ポリシー適用）
-     */
-    public function update(Request $request, Task $task): JsonResponse
+    public function update(UpdateTaskRequest $request, Task $task, UpdateTaskUseCase $useCase): JsonResponse
+    {
+        $updated = $useCase->execute($task, $request->validated());
+
+        return ApiResponse::success('タスクを更新しました', $updated);
+    }
+
+    public function destroy(Task $task, DeleteTaskUseCase $useCase): JsonResponse
+    {
+        $useCase->execute($task);
+
+        return ApiResponse::success('タスクを削除しました', null, 200);
+    }
+
+
+    public function assign(AssignUsersRequest $request, Task $task, AssignUsersToTaskUseCase $useCase): JsonResponse
+    {
+        $userIds = $request->validated()['user_ids'];
+
+        $assignedUsers = $useCase->execute($task, $userIds);
+
+        return ApiResponse::success('アサインしました', [
+            'assigned_users' => $assignedUsers
+        ]);
+    }
+    public function toggleDone(Task $task): JsonResponse
     {
         $this->authorize('update', $task);
+        $task->is_done = ! $task->is_done;
+        $task->save();
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'due_date' => 'nullable|date',
-        ]);
-
-        $task->update($validated);
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $task,
-        ]);
-    }
-
-    /**
-     * タスク削除（認可ポリシー適用）
-     */
-    public function destroy(Task $task): Response
-    {
-        $this->authorize('delete', $task);
-
-        $task->delete();
-
-        return response()->noContent();
-    }
-
-    public function assign(Request $request, Task $task): JsonResponse
-    {
-        $this->authorize('update', $task); // タスク作成者のみがアサイン可能
-
-        $validated = $request->validate([
-            'user_ids' => 'required|array',
-            'user_ids.*' => 'exists:users,id',
-        ]);
-
-        // アサイン（同期させたいなら sync()、追加だけなら attach()）
-        $task->assignedUsers()->sync($validated['user_ids']);
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Users assigned to task successfully',
-            'assigned_users' => $task->assignedUsers()->get(),
-        ]);
+        return ApiResponse::success('完了状態を更新しました', $task);
     }
 }

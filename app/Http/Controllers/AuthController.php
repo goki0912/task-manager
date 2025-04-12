@@ -2,116 +2,41 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Helpers\ApiResponse;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\UseCases\User\LoginUserUseCase;
+use App\UseCases\User\LogoutUserUseCase;
+use App\UseCases\User\RegisterUserUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
-    /**
-     * ユーザー登録
-     */
-    public function register(Request $request): JsonResponse
+    public function register(RegisterRequest $request, RegisterUserUseCase $useCase): JsonResponse
     {
-        // バリデーション
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|unique:users',
-            'password' => 'required|string|min:8',
-        ]);
+        $user = $useCase->execute($request->validated());
+        $token = $user->generateAuthToken();
 
-        // バリデーション失敗時のレスポンス
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        // ユーザー作成
-        $user = User::create([
-            'name' => $request->input('name'),
-            'email' => $request->input('email'),
-            'password' => Hash::make($request->input('password')),
-        ]);
-
-        // API トークン発行
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'User registered successfully',
-            'user' => $user,
+        return ApiResponse::success('ユーザー登録に成功しました', [
             'token' => $token,
         ], 201);
     }
 
-    /**
-     * ログイン
-     */
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request, LoginUserUseCase $useCase): JsonResponse
     {
-        // バリデーション
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|string|email',
-            'password' => 'required|string',
-        ]);
+        $user = $useCase->execute($request->validated());
+        $token = $user->generateAuthToken();
 
-        // バリデーション失敗時のレスポンス
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        // ユーザー取得
-        $user = User::where('email', $request->input('email'))->first();
-
-        // 認証失敗時のレスポンス
-        if (! $user || ! Hash::check($request->input('password'), $user->password)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Invalid credentials',
-                'errors' => ['email' => ['The provided credentials are incorrect.']],
-            ], 401);
-        }
-
-        // API トークン発行
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Login successful',
-            'user' => $user,
+        return ApiResponse::success('ログインに成功しました', [
             'token' => $token,
         ]);
     }
 
-    /**
-     * ログアウト
-     */
-    public function logout(Request $request): JsonResponse
+    public function logout(Request $request, LogoutUserUseCase $useCase): JsonResponse
     {
-        $user = $request->user();
+        $useCase->execute($request->user());
 
-        if (! $user) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized. No valid token found.',
-            ], 401);
-        }
-
-        // ユーザーのすべてのトークンを削除（ログアウト処理）
-        $user->tokens()->delete();
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Logged out successfully',
-        ], 200);
+        return ApiResponse::success('ログアウトしました', null);
     }
 }
