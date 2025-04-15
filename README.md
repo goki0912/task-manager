@@ -30,7 +30,7 @@ LINE通知によるリマインダー機能付き。
 ```bash
 # Laravel バックエンドの準備
 cd task-manager
-cp .env.example .env
+cp .env.example .env (もしくは共有された.envファイルを使用)
 
 # ↓ 以下の環境変数を .env に追記（提供された値を入力）
 echo '
